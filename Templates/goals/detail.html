@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-start;">
+  <div>
+    <h1>{{ goal.title }}</h1>
+    <p class="subtitle">
+      <span class="category-pill category-{{ goal.category }}">{{ goal.get_category_display }}</span>
+      <span class="goal-status-badge status-{{ goal.status }}" style="margin-left:8px;">{{ goal.get_status_display }}</span>
+      {% if goal.target_date %} • 📅 {{ goal.target_date|date:"M d, Y" }}{% endif %}
+    </p>
+  </div>
+  <div style="display:flex; gap:10px;">
+    <a href="{% url 'goals:edit' goal.pk %}" class="btn-secondary">✏️ Edit</a>
+    <a href="{% url 'goals:delete' goal.pk %}" class="btn-danger">🗑 Delete</a>
+  </div>
+</div>
+
+{% if goal.description %}
+<div class="form-card" style="margin-bottom:20px;">
+  <p style="color:#ccc; line-height:1.8;">{{ goal.description }}</p>
+</div>
+{% endif %}
+
+<!-- Progress Section -->
+<div class="form-card" style="margin-bottom:20px;">
+  <h3 style="margin-bottom:16px; color:#fff;">📊 Progress</h3>
+  <div style="display:flex; align-items:center; gap:16px; margin-bottom:12px;">
+    <div class="progress-bar-track" style="flex:1;">
+      <div class="progress-bar-fill" id="progress-fill" style="width:{{ goal.progress }}%"></div>
+    </div>
+    <span id="progress-display" style="color:#a78bfa; font-weight:700; font-size:1.2rem; min-width:50px;">{{ goal.progress }}%</span>
+  </div>
+  <input type="range" min="0" max="100" value="{{ goal.progress }}"
+         class="progress-slider" id="progress-slider"
+         oninput="updateProgress(this.value)">
+  <p style="color:#555; font-size:0.8rem; margin-top:8px;">Drag slider to update progress — saves automatically</p>
+</div>
+
+<!-- AI Tools -->
+<div class="ai-actions" style="margin-bottom:20px;">
+  <h3 style="margin-bottom:14px; color:#a78bfa;">🤖 AI Coaching</h3>
+  <div style="display:flex; gap:12px; flex-wrap:wrap;">
+    <button onclick="getCoaching()" class="btn-ai">💡 Get AI Coaching</button>
+    <button onclick="getMilestones()" class="btn-ai">🗺 Generate Roadmap</button>
+  </div>
+  <div id="ai-loading" style="display:none; margin-top:16px; color:#a78bfa;">⏳ AI coach is thinking...</div>
+
+  <div id="ai-coaching-box" style="display:none; margin-top:16px;">
+    <div class="form-card" style="border-color:#7c3aed44;">
+      <h4 style="color:#a78bfa; margin-bottom:12px;">💡 AI Coaching</h4>
+      <p id="ai-coaching-content" style="color:#ccc; line-height:1.8; white-space:pre-wrap;"></p>
+    </div>
+  </div>
+</div>
+
+<!-- Milestones -->
+<div class="form-card">
+  <h3 style="margin-bottom:16px; color:#fff;">🗺 Roadmap Milestones</h3>
+  <div id="milestones-container">
+    {% if goal.ai_milestones %}
+      {% for m in goal.ai_milestones %}
+      <div class="milestone-item {% if goal.progress >= m.percent %}milestone-done{% endif %}">
+        <div class="milestone-percent">{{ m.percent }}%</div>
+        <div class="milestone-content">
+          <h4>{{ m.milestone }}</h4>
+          <p>{{ m.description }}</p>
+        </div>
+        <div class="milestone-check">
+          {% if goal.progress >= m.percent %}✅{% else %}⬜{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <p class="empty-state" id="no-milestones-msg">No roadmap yet. Click "Generate Roadmap" to let AI create one!</p>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+const goalId = {{ goal.pk }};
+const csrfToken = '{{ csrf_token }}';
+let saveTimeout;
+
+function updateProgress(value) {
+  document.getElementById('progress-display').innerText = value + '%';
+  document.getElementById('progress-fill').style.width = value + '%';
+  clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(() => saveProgress(value), 600);
+}
+
+async function saveProgress(value) {
+  await fetch(`/goals/${goalId}/progress/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ progress: value })
+  });
+}
+
+async function getCoaching() {
+  document.getElementById('ai-loading').style.display = 'block';
+  document.getElementById('ai-coaching-box').style.display = 'none';
+  const res = await fetch(`/goals/${goalId}/coaching/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': csrfToken }
+  });
+  const data = await res.json();
+  document.getElementById('ai-loading').style.display = 'none';
+  document.getElementById('ai-coaching-content').innerText = data.advice;
+  document.getElementById('ai-coaching-box').style.display = 'block';
+}
+
+async function getMilestones() {
+  document.getElementById('ai-loading').style.display = 'block';
+  const res = await fetch(`/goals/${goalId}/milestones/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': csrfToken }
+  });
+  const data = await res.json();
+  document.getElementById('ai-loading').style.display = 'none';
+
+  if (data.milestones && data.milestones.length > 0) {
+    const container = document.getElementById('milestones-container');
+    const noMsg = document.getElementById('no-milestones-msg');
+    if (noMsg) noMsg.remove();
+    const currentProgress = parseInt(document.getElementById('progress-display').innerText);
+    container.innerHTML = '';
+    data.milestones.forEach(m => {
+      const done = currentProgress >= m.percent;
+      container.innerHTML += `
+        <div class="milestone-item ${done ? 'milestone-done' : ''}">
+          <div class="milestone-percent">${m.percent}%</div>
+          <div class="milestone-content">
+            <h4>${m.milestone}</h4>
+            <p>${m.description}</p>
+          </div>
+          <div class="milestone-check">${done ? '✅' : '⬜'}</div>
+        </div>`;
+    });
+  }
+}
+</script>
+
+{% endblock %}

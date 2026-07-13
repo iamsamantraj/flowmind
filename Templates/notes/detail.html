@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-start;">
+  <div>
+    <h1>{{ note.title }}</h1>
+    <p class="subtitle">{{ note.created_at|date:"F d, Y" }} •
+      {% for tag in note.tags.all %}<span class="tag">{{ tag.name }}</span>{% endfor %}
+    </p>
+  </div>
+  <div style="display:flex; gap:10px;">
+    <a href="{% url 'notes:edit' note.pk %}" class="btn-secondary">✏️ Edit</a>
+    <a href="{% url 'notes:delete' note.pk %}" class="btn-danger">🗑 Delete</a>
+  </div>
+</div>
+
+<!-- Note Content -->
+<div class="form-card" style="margin-bottom:20px;">
+  <p style="white-space: pre-wrap; line-height:1.8; color:#ccc;">{{ note.content }}</p>
+</div>
+
+<!-- AI Actions -->
+<div class="ai-actions">
+  <h3 style="margin-bottom:14px; color:#a78bfa;">🤖 AI Tools</h3>
+  <div style="display:flex; gap:12px; flex-wrap:wrap;">
+    <button onclick="summarizeNote()" class="btn-ai">✨ Summarize with AI</button>
+    <button onclick="improveNote()" class="btn-ai">🔧 Improve Writing</button>
+  </div>
+
+  <!-- AI Output Box -->
+  <div id="ai-output" style="display:none; margin-top:20px;">
+    <div class="form-card">
+      <h4 id="ai-output-title" style="color:#a78bfa; margin-bottom:12px;"></h4>
+      <div id="ai-output-content" style="white-space:pre-wrap; line-height:1.8; color:#ccc;"></div>
+    </div>
+  </div>
+
+  <div id="ai-loading" style="display:none; margin-top:16px; color:#a78bfa;">
+    ⏳ AI is thinking...
+  </div>
+</div>
+
+<!-- Existing AI Summary -->
+<!-- {% if note.ai_summary %}
+<div class="form-card" style="margin-top:20px; border-color:#7c3aed44;">
+  <h4 style="color:#a78bfa; margin-bottom:12px;">📋 Last AI Summary</h4>
+  <p style="white-space:pre-wrap; color:#ccc;">{{ note.ai_summary }}</p>
+</div>
+{% endif %} -->
+
+<script>
+const noteId = {{ note.pk }};
+const csrfToken = '{{ csrf_token }}';
+
+async function callAI(url, title) {
+  document.getElementById('ai-loading').style.display = 'block';
+  document.getElementById('ai-output').style.display = 'none';
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' }
+  });
+  const data = await res.json();
+
+  document.getElementById('ai-loading').style.display = 'none';
+  document.getElementById('ai-output-title').innerText = title;
+  document.getElementById('ai-output-content').innerText = data.summary || data.improved || data.error;
+  document.getElementById('ai-output').style.display = 'block';
+}
+
+function summarizeNote() {
+  callAI(`/notes/${noteId}/summarize/`, '✨ AI Summary');
+}
+
+function improveNote() {
+  callAI(`/notes/${noteId}/improve/`, '🔧 Improved Writing');
+}
+</script>
+
+{% endblock %}

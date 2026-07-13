@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-start;">
+  <div>
+    <h1 class="{% if task.status == 'completed' %}strikethrough{% endif %}">{{ task.title }}</h1>
+    <p class="subtitle">
+      <span class="status-badge status-{{ task.status }}">{{ task.get_status_display }}</span>
+      <span class="task-badge" style="margin-left:8px;">{{ task.priority }} priority</span>
+      {% if task.due_date %} • 📅 Due {{ task.due_date|date:"M d, Y" }}{% endif %}
+    </p>
+  </div>
+  <div style="display:flex; gap:10px;">
+    <a href="{% url 'tasks:edit' task.pk %}" class="btn-secondary">✏️ Edit</a>
+    <a href="{% url 'tasks:delete' task.pk %}" class="btn-danger">🗑 Delete</a>
+  </div>
+</div>
+
+{% if task.description %}
+<div class="form-card" style="margin-bottom:20px;">
+  <p style="color:#ccc; line-height:1.8;">{{ task.description }}</p>
+</div>
+{% endif %}
+
+<!-- AI Tools -->
+<div class="ai-actions" style="margin-bottom:20px;">
+  <h3 style="margin-bottom:14px; color:#a78bfa;">🤖 AI Tools</h3>
+  <div style="display:flex; gap:12px; flex-wrap:wrap;">
+    <button onclick="generateSubtasks()" class="btn-ai">🧩 Generate Subtasks</button>
+    <button onclick="getPriorityAdvice()" class="btn-ai">🎯 Prioritization Advice</button>
+  </div>
+  <div id="ai-loading" style="display:none; margin-top:16px; color:#a78bfa;">⏳ AI is thinking...</div>
+  <div id="ai-advice-box" style="display:none; margin-top:16px;">
+    <div class="form-card">
+      <h4 style="color:#a78bfa; margin-bottom:10px;">🎯 AI Advice</h4>
+      <p id="ai-advice-content" style="color:#ccc; line-height:1.8;"></p>
+    </div>
+  </div>
+</div>
+
+<!-- Subtasks -->
+<div class="form-card">
+  <h3 style="margin-bottom:16px; color:#fff;">🧩 Subtasks
+    <span id="subtask-count" style="font-size:0.8rem; color:#666; font-weight:400; margin-left:8px;">
+      {% if task.ai_subtasks %}({{ task.ai_subtasks|length }} items){% endif %}
+    </span>
+  </h3>
+  <div id="subtasks-container">
+    {% if task.ai_subtasks %}
+      {% for subtask in task.ai_subtasks %}
+      <div class="subtask-item">
+        <input type="checkbox" class="subtask-check" onchange="this.parentElement.classList.toggle('done')">
+        <span>{{ subtask }}</span>
+      </div>
+      {% endfor %}
+    {% else %}
+      <p class="empty-state" id="no-subtasks-msg">No subtasks yet. Click "Generate Subtasks" to let AI break this down!</p>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+const taskId = {{ task.pk }};
+const csrfToken = '{{ csrf_token }}';
+
+async function generateSubtasks() {
+  document.getElementById('ai-loading').style.display = 'block';
+  const res = await fetch(`/tasks/${taskId}/subtasks/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': csrfToken }
+  });
+  const data = await res.json();
+  document.getElementById('ai-loading').style.display = 'none';
+
+  if (data.subtasks && data.subtasks.length > 0) {
+    const container = document.getElementById('subtasks-container');
+    const noMsg = document.getElementById('no-subtasks-msg');
+    if (noMsg) noMsg.remove();
+    container.innerHTML = '';
+    data.subtasks.forEach(subtask => {
+      container.innerHTML += `
+        <div class="subtask-item">
+          <input type="checkbox" class="subtask-check" onchange="this.parentElement.classList.toggle('done')">
+          <span>${subtask}</span>
+        </div>`;
+    });
+    document.getElementById('subtask-count').innerText = `(${data.subtasks.length} items)`;
+  }
+}
+
+async function getPriorityAdvice() {
+  document.getElementById('ai-loading').style.display = 'block';
+  document.getElementById('ai-advice-box').style.display = 'none';
+  const res = await fetch(`/tasks/${taskId}/prioritize/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': csrfToken }
+  });
+  const data = await res.json();
+  document.getElementById('ai-loading').style.display = 'none';
+  document.getElementById('ai-advice-content').innerText = data.advice;
+  document.getElementById('ai-advice-box').style.display = 'block';
+}
+</script>
+
+{% endblock %}

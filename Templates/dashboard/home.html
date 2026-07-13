@@ -1,0 +1,248 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<!-- Header -->
+<div class="dash-header">
+  <div>
+    <h1>Good {% now "H" as hour %}{% if hour < "12" %}Morning{% elif hour < "17" %}Afternoon{% else %}Evening{% endif %}, {{ user.username }} 👋</h1>
+    <p class="subtitle">{% now "l, F d, Y" %} · Here's your productivity overview</p>
+  </div>
+  <a href="{% url 'assistant:new' %}" class="btn-primary" style="width:auto; padding:10px 20px;">
+    🤖 Ask AI Assistant
+  </a>
+</div>
+
+<!-- Top Stats Row -->
+<div class="stats-grid" style="margin-bottom:24px;">
+  <div class="stat-card">
+    <div class="stat-icon notes-icon"><i class="fa fa-sticky-note"></i></div>
+    <div class="stat-info"><h3>{{ total_notes }}</h3><p>Total Notes</p></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon tasks-icon"><i class="fa fa-list-check"></i></div>
+    <div class="stat-info"><h3>{{ total_tasks }}</h3><p>Total Tasks</p></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon done-icon"><i class="fa fa-trophy"></i></div>
+    <div class="stat-info"><h3>{{ completion_rate }}%</h3><p>Task Completion</p></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon goals-icon"><i class="fa fa-bullseye"></i></div>
+    <div class="stat-info"><h3>{{ avg_progress }}%</h3><p>Avg Goal Progress</p></div>
+  </div>
+</div>
+
+<!-- Charts Row -->
+<div class="charts-row">
+
+  <!-- Task Status Donut -->
+  <div class="chart-card">
+    <h3 class="chart-title">📊 Tasks by Status</h3>
+    <div class="chart-wrapper">
+      <canvas id="taskStatusChart"></canvas>
+    </div>
+    <div class="chart-legend">
+      <span class="legend-item"><span class="legend-dot" style="background:#fbbf24"></span>Pending</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#60a5fa"></span>In Progress</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#4ade80"></span>Completed</span>
+    </div>
+  </div>
+
+  <!-- Notes Activity Line Chart -->
+  <div class="chart-card">
+    <h3 class="chart-title">📝 Notes This Week</h3>
+    <div class="chart-wrapper">
+      <canvas id="notesChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Goal Categories Donut -->
+  <div class="chart-card">
+    <h3 class="chart-title">🎯 Goals by Category</h3>
+    <div class="chart-wrapper">
+      <canvas id="goalCategoryChart"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<!-- Bottom Grid -->
+<div class="dashboard-grid" style="margin-top:24px;">
+
+  <!-- Upcoming Tasks -->
+  <div class="dashboard-card">
+    <div class="card-header">
+      <h2>⚡ Upcoming Tasks</h2>
+      <a href="{% url 'tasks:list' %}">View All</a>
+    </div>
+    {% for task in upcoming_tasks %}
+    <a href="{% url 'tasks:detail' task.pk %}" style="text-decoration:none;">
+      <div class="dash-task-item priority-{{ task.priority }}">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span class="task-status-dot status-{{ task.status }}"></span>
+          <span class="dash-task-title">{{ task.title|truncatechars:35 }}</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span class="priority-pill priority-{{ task.priority }}">{{ task.priority }}</span>
+          {% if task.due_date %}
+            <span style="font-size:0.75rem; color:#555;">{{ task.due_date|date:"M d" }}</span>
+          {% endif %}
+        </div>
+      </div>
+    </a>
+    {% empty %}
+    <p class="empty-state">🎉 No upcoming tasks!</p>
+    {% endfor %}
+  </div>
+
+  <!-- Active Goals Progress -->
+  <div class="dashboard-card">
+    <div class="card-header">
+      <h2>🎯 Active Goals</h2>
+      <a href="{% url 'goals:list' %}">View All</a>
+    </div>
+    {% for goal in active_goal_list %}
+    <a href="{% url 'goals:detail' goal.pk %}" style="text-decoration:none;">
+      <div class="dash-goal-item">
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <span class="dash-goal-title">{{ goal.title|truncatechars:30 }}</span>
+          <span class="progress-percent">{{ goal.progress }}%</span>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" style="width:{{ goal.progress }}%"></div>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-top:4px;">
+          <span class="category-badge category-{{ goal.category }}" style="font-size:0.68rem;">{{ goal.get_category_display }}</span>
+          {% if goal.target_date %}
+            <span style="font-size:0.72rem; color:#555;">{{ goal.target_date|date:"M d, Y" }}</span>
+          {% endif %}
+        </div>
+      </div>
+    </a>
+    {% empty %}
+    <p class="empty-state">🎯 No active goals yet!</p>
+    {% endfor %}
+  </div>
+
+</div>
+
+<!-- Recent Notes -->
+<div class="dashboard-card" style="margin-top:24px;">
+  <div class="card-header">
+    <h2>📝 Recent Notes</h2>
+    <a href="{% url 'notes:list' %}">View All</a>
+  </div>
+  <div class="notes-grid" style="margin-top:12px;">
+    {% for note in recent_notes %}
+    <a href="{% url 'notes:detail' note.pk %}" class="note-card-link">
+      <div class="note-card">
+        <div class="note-card-header">
+          <h3>{{ note.title }}</h3>
+          {% if note.is_pinned %}<span class="pin-badge">📌</span>{% endif %}
+        </div>
+        <p class="note-preview">{{ note.content|truncatechars:80 }}</p>
+        <div class="note-card-footer">
+          <div class="note-tags">
+            {% for tag in note.tags.all %}<span class="tag">{{ tag.name }}</span>{% endfor %}
+          </div>
+          <span class="note-date">{{ note.created_at|date:"M d" }}</span>
+        </div>
+      </div>
+    </a>
+    {% empty %}
+    <p class="empty-state" style="grid-column:1/-1;">📝 No notes yet!</p>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const taskData   = {{ task_status_data|safe }};
+const goalData   = {{ goal_category_data|safe }};
+const notesData  = {{ notes_chart_data|safe }};
+
+Chart.defaults.color = '#666';
+Chart.defaults.borderColor = '#1e1e35';
+
+// Task Status Donut
+new Chart(document.getElementById('taskStatusChart'), {
+  type: 'doughnut',
+  data: {
+    labels: taskData.labels,
+    datasets: [{
+      data: taskData.data,
+      backgroundColor: taskData.colors,
+      borderWidth: 0,
+      hoverOffset: 6
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false }
+    },
+    cutout: '70%'
+  }
+});
+
+// Notes Line Chart
+new Chart(document.getElementById('notesChart'), {
+  type: 'line',
+  data: {
+    labels: notesData.labels,
+    datasets: [{
+      label: 'Notes Created',
+      data: notesData.data,
+      borderColor: '#7c3aed',
+      backgroundColor: 'rgba(124,58,237,0.1)',
+      tension: 0.4,
+      fill: true,
+      pointBackgroundColor: '#a78bfa',
+      pointRadius: 5,
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: '#1e1e35' }, ticks: { color: '#555' } },
+      y: {
+        grid: { color: '#1e1e35' },
+        ticks: { color: '#555', stepSize: 1 },
+        beginAtZero: true
+      }
+    }
+  }
+});
+
+// Goal Category Donut
+new Chart(document.getElementById('goalCategoryChart'), {
+  type: 'doughnut',
+  data: {
+    labels: goalData.labels.length ? goalData.labels : ['No Goals'],
+    datasets: [{
+      data: goalData.data.length ? goalData.data : [1],
+      backgroundColor: goalData.colors,
+      borderWidth: 0,
+      hoverOffset: 6
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: true,
+        position: 'bottom',
+        labels: { color: '#666', boxWidth: 12, padding: 12 }
+      }
+    },
+    cutout: '70%'
+  }
+});
+</script>
+
+{% endblock %}

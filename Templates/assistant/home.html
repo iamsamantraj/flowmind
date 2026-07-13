@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="page-header" style="display:flex; justify-content:space-between; align-items:center;">
+  <div>
+    <h1>🤖 AI Assistant</h1>
+    <p class="subtitle">Your personal FlowMind AI — knows your notes, tasks & goals</p>
+  </div>
+  <a href="{% url 'assistant:new' %}" class="btn-primary" style="width:auto; padding:10px 20px;">+ New Chat</a>
+</div>
+
+{% if conversations %}
+<div class="conversations-grid">
+  {% for conv in conversations %}
+  <div class="conv-card">
+    <div class="conv-card-left">
+      <div class="conv-icon">🤖</div>
+      <div>
+        <p class="conv-title">{{ conv.title }}</p>
+        <p class="conv-date">{{ conv.updated_at|date:"M d, Y · H:i" }}</p>
+      </div>
+    </div>
+    <div class="conv-actions">
+      <a href="{% url 'assistant:conversation' conv.pk %}" class="btn-ai" style="padding:6px 14px; font-size:0.8rem;">Open</a>
+      <button onclick="deleteConv({{ conv.pk }}, this)" class="btn-danger" style="padding:6px 12px; font-size:0.8rem; border:none; cursor:pointer;">🗑</button>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state" style="text-align:center; padding:80px 0;">
+  <p style="font-size:3rem; margin-bottom:16px;">🤖</p>
+  <p style="font-size:1.2rem; color:#666; margin-bottom:24px;">No conversations yet.</p>
+  <a href="{% url 'assistant:new' %}" class="btn-primary" style="width:auto; padding:12px 28px;">Start Your First Chat</a>
+</div>
+{% endif %}
+
+<script>
+async function deleteConv(pk, btn) {
+  if (!confirm('Delete this conversation?')) return;
+  await fetch(`/assistant/${pk}/delete/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+  });
+  btn.closest('.conv-card').remove();
+}
+</script>
+
+{% endblock %}

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FlowMind – AI Productivity OS</title>
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+</head>
+<body>
+
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert">{{ message }}</div>
+  {% endfor %}
+{% endif %}
+
+{% block sidebar %}
+{% if user.is_authenticated %}
+<div class="app-layout">
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <span class="brand-icon">⚡</span>
+      <span class="brand-name">FlowMind</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="{% url 'dashboard:home' %}" class="nav-item {% if request.resolver_match.app_name == 'dashboard' %}active{% endif %}">
+        <i class="fa fa-home"></i> Dashboard
+      </a>
+      <a href="{% url 'notes:list' %}" class="nav-item {% if request.resolver_match.app_name == 'notes' %}active{% endif %}">
+        <i class="fa fa-sticky-note"></i> Notes
+      </a>
+      <a href="{% url 'tasks:list' %}" class="nav-item {% if request.resolver_match.app_name == 'tasks' %}active{% endif %}">
+        <i class="fa fa-check-square"></i> Tasks
+      </a>
+      <a href="{% url 'goals:list' %}" class="nav-item {% if request.resolver_match.app_name == 'goals' %}active{% endif %}">
+        <i class="fa fa-bullseye"></i> Goals
+      </a>
+      <a href="{% url 'assistant:chat' %}" class="nav-item {% if request.resolver_match.app_name == 'assistant' %}active{% endif %}">
+        <i class="fa fa-robot"></i> AI Assistant
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="{% url 'accounts:profile' %}" class="nav-item">
+        <i class="fa fa-user"></i> {{ user.username }}
+      </a>
+      <a href="{% url 'accounts:logout' %}" class="nav-item logout">
+        <i class="fa fa-sign-out-alt"></i> Logout
+      </a>
+    </div>
+  </aside>
+  <main class="main-content">
+{% endif %}
+{% endblock %}
+
+{% block content %}{% endblock %}
+
+{% block close_layout %}
+{% if user.is_authenticated %}
+  </main>
+</div>
+{% endif %}
+{% endblock %}
+
+</body>
+</html>

@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="page-header" style="display:flex; justify-content:space-between; align-items:center;">
+  <div>
+    <h1>📝 My Notes</h1>
+    <p class="subtitle">All your thoughts in one place</p>
+  </div>
+  <a href="{% url 'notes:create' %}" class="btn-primary" style="width:auto; padding: 10px 20px;">+ New Note</a>
+</div>
+
+<!-- Search -->
+<form method="GET" style="margin-bottom: 24px;">
+  <input type="text" name="q" value="{{ query }}" class="form-control"
+         placeholder="Search notes..." style="max-width: 400px;">
+</form>
+
+<!-- Notes Grid -->
+<div class="notes-grid">
+  {% for note in notes %}
+    <a href="{% url 'notes:detail' note.pk %}" class="note-card-link">
+    <div class="note-card {% if note.is_pinned %}pinned{% endif %}">
+        <div class="note-card-header">
+        <h3>{{ note.title }}</h3>
+        {% if note.is_pinned %}<span class="pin-badge">📌 Pinned</span>{% endif %}
+        </div>
+        <p class="note-preview">{{ note.content|truncatechars:120 }}</p>
+        <div class="note-card-footer">
+        <div class="note-tags">
+            {% for tag in note.tags.all %}
+            <span class="tag">{{ tag.name }}</span>
+            {% endfor %}
+        </div>
+        <span class="note-date">{{ note.created_at|date:"M d, Y" }}</span>
+        </div>
+    </div>
+    </a>
+    {% empty %}
+    <div class="empty-state" style="grid-column: 1/-1; padding: 60px 0;">
+    <p style="font-size:1.1rem;">No notes yet! <a href="{% url 'notes:create' %}">Create your first note</a></p>
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}

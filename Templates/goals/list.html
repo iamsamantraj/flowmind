@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="page-header" style="display:flex; justify-content:space-between; align-items:center;">
+  <div>
+    <h1>🎯 My Goals</h1>
+    <p class="subtitle">Track what matters most</p>
+  </div>
+  <a href="{% url 'goals:create' %}" class="btn-primary" style="width:auto; padding:10px 20px;">+ New Goal</a>
+</div>
+
+<!-- Stats -->
+<div class="stats-grid" style="margin-bottom:24px;">
+  <div class="stat-card">
+    <div class="stat-icon goals-icon"><i class="fa fa-fire"></i></div>
+    <div class="stat-info"><h3>{{ active_count }}</h3><p>Active</p></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon done-icon"><i class="fa fa-trophy"></i></div>
+    <div class="stat-info"><h3>{{ completed_count }}</h3><p>Completed</p></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-icon tasks-icon"><i class="fa fa-pause"></i></div>
+    <div class="stat-info"><h3>{{ paused_count }}</h3><p>Paused</p></div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="filter-bar">
+  <a href="{% url 'goals:list' %}" class="filter-btn {% if not category_filter and not status_filter %}active{% endif %}">All</a>
+  <a href="?status=active" class="filter-btn {% if status_filter == 'active' %}active{% endif %}">🔥 Active</a>
+  <a href="?status=completed" class="filter-btn {% if status_filter == 'completed' %}active{% endif %}">✅ Completed</a>
+  <a href="?status=paused" class="filter-btn {% if status_filter == 'paused' %}active{% endif %}">⏸ Paused</a>
+  <a href="?category=career" class="filter-btn {% if category_filter == 'career' %}active{% endif %}">💼 Career</a>
+  <a href="?category=health" class="filter-btn {% if category_filter == 'health' %}active{% endif %}">❤️ Health</a>
+  <a href="?category=finance" class="filter-btn {% if category_filter == 'finance' %}active{% endif %}">💰 Finance</a>
+  <a href="?category=learning" class="filter-btn {% if category_filter == 'learning' %}active{% endif %}">📚 Learning</a>
+</div>
+
+<!-- Goals Grid -->
+<div class="goals-grid">
+  {% for goal in goals %}
+  <a href="{% url 'goals:detail' goal.pk %}" class="goal-card-link">
+    <div class="goal-card status-border-{{ goal.status }}">
+
+      <div class="goal-card-top">
+        <span class="category-pill category-{{ goal.category }}">{{ goal.get_category_display }}</span>
+        <span class="goal-status-badge status-{{ goal.status }}">{{ goal.get_status_display }}</span>
+      </div>
+
+      <h3 class="goal-card-title">{{ goal.title }}</h3>
+
+      {% if goal.description %}
+        <p class="goal-card-desc">{{ goal.description|truncatechars:90 }}</p>
+      {% endif %}
+
+      <!-- Progress Bar -->
+      <div class="progress-bar-container">
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" style="width: {{ goal.progress }}%"></div>
+        </div>
+        <span class="progress-label">{{ goal.progress }}%</span>
+      </div>
+
+      <div class="goal-card-footer">
+        {% if goal.target_date %}
+          <span class="goal-due">📅 {{ goal.target_date|date:"M d, Y" }}</span>
+        {% else %}
+          <span class="goal-due" style="color:#333;">No deadline</span>
+        {% endif %}
+        {% if goal.ai_milestones %}
+          <span class="subtask-count">🗺 {{ goal.ai_milestones|length }} milestones</span>
+        {% endif %}
+      </div>
+
+    </div>
+  </a>
+  {% empty %}
+  <div class="empty-state" style="grid-column:1/-1; padding:60px 0; text-align:center;">
+    <p style="font-size:2rem; margin-bottom:12px;">🎯</p>
+    <p style="font-size:1.1rem; color:#666;">No goals yet. <a href="{% url 'goals:create' %}">Set your first goal!</a></p>
+  </div>
+  {% endfor %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="page-header">
+  <h1>👤 My Profile</h1>
+  <p class="subtitle">Manage your account and view your stats</p>
+</div>
+
+<div class="profile-layout">
+
+  <!-- Left — Avatar + Info -->
+  <div class="profile-left">
+    <div class="profile-card">
+      <div class="avatar-section">
+        {% if user.avatar %}
+          <img src="{{ user.avatar.url }}" class="avatar-img" alt="Avatar">
+        {% else %}
+          <div class="avatar-placeholder">{{ user.username|first|upper }}</div>
+        {% endif %}
+      </div>
+      <h2 class="profile-name">{{ user.username }}</h2>
+      <p class="profile-email">{{ user.email }}</p>
+      {% if user.bio %}
+        <p class="profile-bio">{{ user.bio }}</p>
+      {% else %}
+        <p class="profile-bio" style="color:#444; font-style:italic;">No bio yet</p>
+      {% endif %}
+      <p class="profile-joined">Member since {{ user.created_at|date:"F Y" }}</p>
+      {% if workspace %}
+        <div class="workspace-badge">
+          ⚡ {{ workspace.name }}
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Stats Card -->
+    <div class="profile-card" style="margin-top:16px;">
+      <h3 style="color:#fff; margin-bottom:16px;">📊 Your Stats</h3>
+      <div class="profile-stats">
+        <div class="profile-stat">
+          <h4>{{ stats.total_notes }}</h4>
+          <p>Notes</p>
+        </div>
+        <div class="profile-stat">
+          <h4>{{ stats.total_tasks }}</h4>
+          <p>Tasks</p>
+        </div>
+        <div class="profile-stat">
+          <h4>{{ stats.completed_tasks }}</h4>
+          <p>Done</p>
+        </div>
+        <div class="profile-stat">
+          <h4>{{ stats.active_goals }}</h4>
+          <p>Goals</p>
+        </div>
+      </div>
+
+      <!-- Task completion bar -->
+      <div style="margin-top:16px;">
+        <div class="progress-label">
+          <span style="color:#aaa; font-size:0.82rem;">Task Completion Rate</span>
+          <span class="progress-percent">
+            {% if stats.total_tasks %}
+              {{ stats.completed_tasks|floatformat:0 }}/{{ stats.total_tasks }}
+            {% else %}0/0{% endif %}
+          </span>
+        </div>
+        <div class="progress-bar-bg" style="margin-top:6px;">
+          <div class="progress-bar-fill" style="width:{% if stats.total_tasks %}{% widthratio stats.completed_tasks stats.total_tasks 100 %}{% else %}0{% endif %}%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right — Edit Form -->
+  <div class="profile-right">
+    <div class="profile-card">
+      <h3 style="color:#fff; margin-bottom:20px;">✏️ Edit Profile</h3>
+      <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <div class="mb-3">
+          <label>Username</label>
+          <input type="text" name="username" value="{{ user.username }}" class="form-control">
+        </div>
+
+        <div class="mb-3">
+          <label>Email <span style="color:#444; font-size:0.8rem;">(cannot be changed)</span></label>
+          <input type="email" value="{{ user.email }}" class="form-control" disabled>
+        </div>
+
+        <div class="mb-3">
+          <label>Bio</label>
+          <textarea name="bio" class="form-control" rows="3"
+                    placeholder="Tell us about yourself...">{{ user.bio }}</textarea>
+        </div>
+
+        <div class="mb-3">
+          <label>Profile Picture</label>
+          <input type="file" name="avatar" class="form-control" accept="image/*">
+          {% if user.avatar %}
+            <p style="color:#555; font-size:0.78rem; margin-top:4px;">Current avatar will be replaced</p>
+          {% endif %}
+        </div>
+
+        <button type="submit" class="btn-primary" style="width:auto; padding:10px 28px;">
+          Save Changes
+        </button>
+      </form>
+    </div>
+
+    <!-- Account Actions -->
+    <div class="profile-card" style="margin-top:16px;">
+      <h3 style="color:#fff; margin-bottom:16px;">⚙️ Account</h3>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <a href="{% url 'notes:list' %}" class="btn-secondary" style="text-align:center;">
+          📝 My Notes ({{ stats.total_notes }})
+        </a>
+        <a href="{% url 'tasks:list' %}" class="btn-secondary" style="text-align:center;">
+          ✅ My Tasks ({{ stats.total_tasks }})
+        </a>
+        <a href="{% url 'goals:list' %}" class="btn-secondary" style="text-align:center;">
+          🎯 My Goals ({{ stats.total_goals }})
+        </a>
+        <a href="{% url 'accounts:logout' %}" class="btn-danger" style="text-align:center; border:none; cursor:pointer; padding:10px;">
+          🚪 Logout
+        </a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

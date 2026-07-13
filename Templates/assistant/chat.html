@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="chat-layout">
+
+  <!-- Conversation Sidebar -->
+  <div class="chat-sidebar">
+    <a href="{% url 'assistant:new' %}" class="btn-primary" style="width:100%; text-align:center; padding:10px; margin-bottom:16px; display:block;">+ New Chat</a>
+    {% for conv in all_conversations %}
+    <a href="{% url 'assistant:conversation' conv.pk %}"
+       class="conv-sidebar-item {% if conv.pk == conversation.pk %}active{% endif %}">
+      <span class="conv-sidebar-title">{{ conv.title|truncatechars:30 }}</span>
+      <span class="conv-sidebar-date">{{ conv.updated_at|date:"M d" }}</span>
+    </a>
+    {% endfor %}
+  </div>
+
+  <!-- Chat Area -->
+  <div class="chat-area">
+
+    <!-- Chat Header -->
+    <div class="chat-header">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <div class="ai-avatar">🤖</div>
+        <div>
+          <p class="chat-title" id="chat-title">{{ conversation.title }}</p>
+          <p style="font-size:0.75rem; color:#555;">FlowMind AI • Knows your workspace</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Messages -->
+    <div class="chat-messages" id="chat-messages">
+
+      {% if not chat_messages %}
+      <div class="ai-welcome">
+        <p style="font-size:1.5rem; margin-bottom:8px;">👋 Hi {{ request.user.username }}!</p>
+        <p style="color:#666; margin-bottom:20px;">I'm your FlowMind AI. I know about your notes, tasks, and goals. Ask me anything!</p>
+        <div class="quick-prompts">
+        <button class="quick-btn" onclick="sendQuick('What are my pending tasks?')">📋 My pending tasks</button>
+        <button class="quick-btn" onclick="sendQuick('Summarize my recent notes')">📝 Summarize my notes</button>
+        <button class="quick-btn" onclick="sendQuick('How am I doing with my goals?')">🎯 My goal progress</button>
+        <button class="quick-btn" onclick="sendQuick('What should I focus on today?')">🔥 What to focus on</button>
+        <button class="quick-btn" onclick="sendQuick('Create a task: Review project proposal, high priority, due tomorrow')">➕ Quick task</button>
+        <button class="quick-btn" onclick="sendQuick('Create a note titled Meeting Notes with content: Discuss Q3 roadmap')">📝 Quick note</button>
+        </div>
+      </div>
+      {% endif %}
+
+      {% for msg in chat_messages %}
+      <div class="message-row {{ msg.role }}">
+        <div class="message-bubble {{ msg.role }}">
+          <p style="white-space:pre-wrap; line-height:1.7;">{{ msg.content }}</p>
+          <span class="message-time">{{ msg.created_at|date:"H:i" }}</span>
+        </div>
+      </div>
+      {% endfor %}
+
+      <div id="typing-indicator" style="display:none;" class="message-row assistant">
+        <div class="message-bubble assistant">
+          <span class="typing-dots"><span></span><span></span><span></span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="chat-input-area">
+      <div class="chat-input-row">
+        <textarea id="message-input" class="chat-input" rows="1"
+                  placeholder="Ask FlowMind AI anything about your workspace..."
+                  onkeydown="handleKey(event)"></textarea>
+        <button onclick="sendMessage()" class="chat-send-btn" id="send-btn">
+          <i class="fa fa-paper-plane"></i>
+        </button>
+      </div>
+      <p style="font-size:0.72rem; color:#333; margin-top:8px; text-align:center;">
+        Press Enter to send · Shift+Enter for new line
+      </p>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const convId = {{ conversation.pk }};
+const csrfToken = '{{ csrf_token }}';
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function sendQuick(text) {
+  document.getElementById('message-input').value = text;
+  sendMessage();
+}
+
+function appendMessage(role, content) {
+  const container = document.getElementById('chat-messages');
+  const welcome = container.querySelector('.ai-welcome');
+  if (welcome) welcome.remove();
+
+  const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const div = document.createElement('div');
+  div.className = `message-row ${role}`;
+  div.innerHTML = `
+    <div class="message-bubble ${role}">
+      <p style="white-space:pre-wrap; line-height:1.7;">${content}</p>
+      <span class="message-time">${time}</span>
+    </div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+async function sendMessage() {
+  const input = document.getElementById('message-input');
+  const message = input.value.trim();
+  if (!message) return;
+
+  input.value = '';
+  appendMessage('user', message);
+
+  document.getElementById('typing-indicator').style.display = 'flex';
+  document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
+  document.getElementById('send-btn').disabled = true;
+
+  const res = await fetch(`/assistant/${convId}/send/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message })
+  });
+  const data = await res.json();
+
+  document.getElementById('typing-indicator').style.display = 'none';
+  document.getElementById('send-btn').disabled = false;
+
+  if (data.response) {
+    appendMessage('assistant', data.response);
+    if (data.conversation_title) {
+      document.getElementById('chat-title').innerText = data.conversation_title;
+    }
+    // ✅ Show toast if a tool was executed
+    if (data.tool_executed) {
+      showToast('✅ Created successfully! Check your notes/tasks/goals.');
+    }
+  }
+}
+
+function showToast(msg) {
+  const toast = document.createElement('div');
+  toast.style.cssText = `
+    position: fixed; bottom: 30px; right: 30px;
+    background: #1e3b2a; color: #4ade80;
+    border: 1px solid #4ade80; padding: 12px 20px;
+    border-radius: 10px; font-size: 0.88rem;
+    z-index: 9999; animation: fadeIn 0.3s ease;
+  `;
+  toast.innerText = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 4000);
+}
+</script>
+
+{% endblock %}
