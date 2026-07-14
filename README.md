@@ -102,7 +102,6 @@ Groq LLaMA AI
 | Database | PostgreSQL |
 | AI Model | Groq LLaMA 3.3 70B |
 | Frontend | Django Templates, HTMX |
-| Background Jobs | Celery + Redis |
 | Deployment | Render/Railway |
 
 
