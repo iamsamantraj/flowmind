@@ -18,31 +18,43 @@
 
 {% block sidebar %}
 {% if user.is_authenticated %}
+
+<!-- ── Mobile Top Bar ── -->
+<div class="mobile-topbar">
+  <span class="mobile-brand">⚡ FlowMind</span>
+  <button class="hamburger" onclick="toggleSidebar()">
+    <i class="fa fa-bars"></i>
+  </button>
+</div>
+
+<!-- ── Sidebar Overlay (mobile) ── -->
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
 <div class="app-layout">
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
       <span class="brand-icon">⚡</span>
       <span class="brand-name">FlowMind</span>
     </div>
     <nav class="sidebar-nav">
-      <a href="{% url 'dashboard:home' %}" class="nav-item {% if request.resolver_match.app_name == 'dashboard' %}active{% endif %}">
+      <a href="{% url 'dashboard:home' %}" class="nav-item {% if request.resolver_match.app_name == 'dashboard' %}active{% endif %}" onclick="closeSidebar()">
         <i class="fa fa-home"></i> Dashboard
       </a>
-      <a href="{% url 'notes:list' %}" class="nav-item {% if request.resolver_match.app_name == 'notes' %}active{% endif %}">
+      <a href="{% url 'notes:list' %}" class="nav-item {% if request.resolver_match.app_name == 'notes' %}active{% endif %}" onclick="closeSidebar()">
         <i class="fa fa-sticky-note"></i> Notes
       </a>
-      <a href="{% url 'tasks:list' %}" class="nav-item {% if request.resolver_match.app_name == 'tasks' %}active{% endif %}">
+      <a href="{% url 'tasks:list' %}" class="nav-item {% if request.resolver_match.app_name == 'tasks' %}active{% endif %}" onclick="closeSidebar()">
         <i class="fa fa-check-square"></i> Tasks
       </a>
-      <a href="{% url 'goals:list' %}" class="nav-item {% if request.resolver_match.app_name == 'goals' %}active{% endif %}">
+      <a href="{% url 'goals:list' %}" class="nav-item {% if request.resolver_match.app_name == 'goals' %}active{% endif %}" onclick="closeSidebar()">
         <i class="fa fa-bullseye"></i> Goals
       </a>
-      <a href="{% url 'assistant:chat' %}" class="nav-item {% if request.resolver_match.app_name == 'assistant' %}active{% endif %}">
+      <a href="{% url 'assistant:chat' %}" class="nav-item {% if request.resolver_match.app_name == 'assistant' %}active{% endif %}" onclick="closeSidebar()">
         <i class="fa fa-robot"></i> AI Assistant
       </a>
     </nav>
     <div class="sidebar-footer">
-      <a href="{% url 'accounts:profile' %}" class="nav-item">
+      <a href="{% url 'accounts:profile' %}" class="nav-item" onclick="closeSidebar()">
         <i class="fa fa-user"></i> {{ user.username }}
       </a>
       <a href="{% url 'accounts:logout' %}" class="nav-item logout">
@@ -50,6 +62,7 @@
       </a>
     </div>
   </aside>
+
   <main class="main-content">
 {% endif %}
 {% endblock %}
@@ -62,6 +75,17 @@
 </div>
 {% endif %}
 {% endblock %}
+
+<script>
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('open');
+}
+</script>
 
 </body>
 </html>
