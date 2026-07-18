@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: flowmind
+    env: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn flowmind.wsgi:application"
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: flowmind-db
+          property: connectionString
+      - key: GROQ_API_KEY
+        sync: false
+      - key: PYTHON_VERSION
+        value: "3.12.0"
+
+databases:
+  - name: flowmind-db
+    databaseName: flowmind_db
+    user: flowmind_user
+    plan: free
